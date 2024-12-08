@@ -149,10 +149,10 @@ export default function Home() {
       <div className="max-w-3xl mx-auto p-4 sm:p-6 space-y-6">
         <header className="text-center py-8">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">
-           GasLess Wallet 
+           GASLIT 
           </h1>
           <p className="text-gray-600">
-            {/* Interact with Base Sepolia testnet using Lit Protocol */}
+           Make Every Transaction gasless
           </p>
         </header>
 
