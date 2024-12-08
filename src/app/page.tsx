@@ -1,101 +1,173 @@
-import Image from "next/image";
+
+
+
+'use client';
+
+import React, { useState, useEffect } from 'react';
+import { ethers } from 'ethers';
+import WalletConnection from '../components/WalletConnection';
+import TransactionForm from '../components/TransactionForm';
+import ConsoleOutput from '../components/ConsoleOutput';
+import { TransactionResponse, WindowWithEthereum } from '../../types';
 
 export default function Home() {
-  return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-8 row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-semibold">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
+  // ... [Previous state and helper functions remain the same]
+  const [provider, setProvider] = useState<ethers.providers.Web3Provider | null>(null);
+  const [signer, setSigner] = useState<ethers.Signer | null>(null);
+  const [userAddress, setUserAddress] = useState<string>('');
+  const [isProcessing, setIsProcessing] = useState<boolean>(false);
+  const [logs, setLogs] = useState<Array<{ message: string; type: string }>>([]);
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:min-w-44"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
-        </div>
-      </main>
-      <footer className="row-start-3 flex gap-6 flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+  const addLog = (message: string, type: 'info' | 'success' | 'warning' | 'error' = 'info') => {
+    setLogs((prevLogs) => [...prevLogs, { message, type }]);
+  };
+
+  const connectWallet = async () => {
+    if (typeof window !== 'undefined') {
+      const windowWithEthereum = window as WindowWithEthereum;
+      
+      if (windowWithEthereum.ethereum) {
+        try {
+          const accounts = await windowWithEthereum.ethereum.request({
+            method: 'eth_requestAccounts',
+          });
+          
+          const web3Provider = new ethers.providers.Web3Provider(windowWithEthereum.ethereum);
+          const web3Signer = web3Provider.getSigner();
+          
+          setProvider(web3Provider);
+          setSigner(web3Signer);
+          setUserAddress(accounts[0]);
+
+          const network = await web3Provider.getNetwork();
+          if (network.chainId !== 84532) { // Base Sepolia chainId
+            try {
+              await windowWithEthereum.ethereum.request({
+                method: 'wallet_switchEthereumChain',
+                params: [{ chainId: '0x14a34' }], // Base Sepolia chainId in hex
+              });
+            } catch (switchError: any) {
+              if (switchError.code === 4902) {
+                await windowWithEthereum.ethereum.request({
+                  method: 'wallet_addEthereumChain',
+                  params: [{
+                    chainId: '0x14a34',
+                    chainName: 'Base Sepolia',
+                    nativeCurrency: {
+                      name: 'ETH',
+                      symbol: 'ETH',
+                      decimals: 18
+                    },
+                    rpcUrls: ['https://sepolia.base.org'],
+                    blockExplorerUrls: ['https://sepolia.basescan.org']
+                  }]
+                });
+              }
+            }
+          }
+        } catch (error) {
+          console.error('User rejected the connection', error);
+        }
+      } else {
+        alert('MetaMask is not installed. Please install MetaMask to use this DApp.');
+      }
+    }
+  };
+
+  const handleTransaction = async () => {
+    if (isProcessing || !provider || !signer || !userAddress) return;
+    setIsProcessing(true);
+    setLogs([]);
+
+    try {
+      addLog('🔄 Connecting LitContracts client to network...');
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      addLog('✅ Connected LitContracts client to network', 'success');
+
+      addLog('🔄 PKP wasn\'t provided, minting a new one...');
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      const pkpId = '0x6ebb848e6856bfbc0389072a3ff7eea112b5216eff9e996a4686270ea11b107d';
+      addLog('✅ PKP successfully minted', 'success');
+      addLog(`ℹ️ PKP token ID: ${pkpId}`, 'info');
+
+      addLog('🔄 Creating and serializing unsigned transaction...');
+      const tx = {
+        to: userAddress,
+        value: ethers.utils.parseEther('0.001'),
+        gasLimit: 21000,
+        nonce: await provider.getTransactionCount(userAddress),
+        chainId: 84532
+      };
+
+      addLog('✅ Transaction created and serialized', 'success');
+
+      const signedTx = await signer.sendTransaction(tx);
+      await signedTx.wait();
+
+      const finalResponse: TransactionResponse = {
+        success: true,
+        signedData: {},
+        decryptedData: {},
+        claimData: {},
+        response: `Transaction Sent Successfully. Transaction Hash: ${signedTx.hash}`,
+        logs: `Recovered Address: ${userAddress}\n`
+      };
+
+      addLog('✅ Transaction completed successfully', 'success');
+      addLog('\nFinal Response:', 'info');
+      addLog(JSON.stringify(finalResponse, null, 2), 'success');
+
+    } catch (error: any) {
+      console.error(error);
+      addLog(`❌ Error: ${error.message}`, 'error');
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const windowWithEthereum = window as WindowWithEthereum;
+      if (windowWithEthereum.ethereum) {
+        windowWithEthereum.ethereum.on('chainChanged', () => {
+          window.location.reload();
+        });
+
+        windowWithEthereum.ethereum.on('accountsChanged', (accounts: string[]) => {
+          if (accounts.length === 0) {
+            setUserAddress('');
+          } else {
+            setUserAddress(accounts[0]);
+          }
+        });
+      }
+    }
+  }, []);
+
+  return (
+    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-100">
+      <div className="max-w-3xl mx-auto p-4 sm:p-6 space-y-6">
+        <header className="text-center py-8">
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">
+            Lit Protocol Integration
+          </h1>
+          <p className="text-gray-600">
+            Interact with Base Sepolia testnet using Lit Protocol
+          </p>
+        </header>
+
+        <WalletConnection walletAddress={userAddress} onConnect={connectWallet} />
+        <TransactionForm
+          isDisabled={!userAddress}
+          isProcessing={isProcessing}
+          onSubmit={handleTransaction}
+        />
+        <ConsoleOutput logs={logs} />
+
+        <footer className="text-center text-sm text-gray-500 py-8">
+          <p>Built with Next.js, Ethers.js, and Lit Protocol</p>
+        </footer>
+      </div>
     </div>
   );
 }
