@@ -9,6 +9,7 @@ import WalletConnection from '../components/WalletConnection';
 import TransactionForm from '../components/TransactionForm';
 import ConsoleOutput from '../components/ConsoleOutput';
 import { TransactionResponse, WindowWithEthereum } from '../../types';
+import Image from 'next/image';
 
 export default function Home() {
   // ... [Previous state and helper functions remain the same]
@@ -146,12 +147,13 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-100">
+      {/* <Image src="/abc.jpg" alt="logo" height={100} width={100} className="mt-12 ml-10" /> */}
       <div className="max-w-3xl mx-auto p-4 sm:p-6 space-y-6">
         <header className="text-center py-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">
+          <h1 className="text-5xl font-bold text-orange-600 mb-2 ">
            GASLIT 
           </h1>
-          <p className="text-gray-600">
+          <p className="text-orange-500">
            Make Every Transaction gasless
           </p>
         </header>
